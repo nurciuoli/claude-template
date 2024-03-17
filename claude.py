@@ -41,28 +41,43 @@ class Worker:
         return f"Worker(Name: {self.name}, Role Context: {self.role_context})"         
 
 
-    def chat(self,user_prompt):
+    def chat(self,user_prompt,attachments=None,json_mode=False):
+        full_prompt=''
+        if attachments is not None:
+            for attachment in attachments:
+                tag_label = attachment['name']
+                full_prompt+=f"<{tag_label}> {attachment['content']} </{tag_label}>"
+        else:
+            full_prompt=user_prompt
         # Add the new user message to the messages list regardless of whether it's empty or not
-        self.messages.append({"role": "user", "content": user_prompt})
+        self.messages.append({"role": "user", "content": full_prompt})
 
         print('PROMPT:')
         print(user_prompt)
         print('...')
 
+        if json_mode==True:
+            self.messages.append({"role": "assistant", "content": "{"})
+
         #send message
         response = send_messsage(self.messages,self.system_prompt,self.model,self.max_tokens,self.temperature)
 
         self.response=response
-        self.print_response_and_append_messages(response)
+        self.print_response_and_append_messages(response,json_mode)
         print('...')
 
 
     #print messages and append
-    def print_response_and_append_messages(self,response):
+    def print_response_and_append_messages(self,response,json_mode):
         for message in response:
             message_json = json.loads(message.json())
-            if(list(message_json.keys())[0]=='text'):
+            if(json_mode==True):
+                print(json.loads("{"+json.loads(self.response[0].json())['text']))
+            elif(list(message_json.keys())[0]=='text'):
                 print(message_json['text'])
                 self.messages.append({'role':self.name,'content':message_json['text']})
+
+               
+
         
 
